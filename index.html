@@ -1592,9 +1592,38 @@
             const deleteTask = async (id) => { if (firebaseUser && db) await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'tasks', id)); };
             
             const savePassword = async (data) => {
-                if (!firebaseUser || !db) return;
-                if (data.id) { const { id, ...rest } = data; await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'passwords', id), rest); } else { await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'passwords'), data); }
-                setShowPwdModal(false);
+                if (!firebaseUser || !db) {
+                    showToast("Fehler: Nicht angemeldet", 'error');
+                    return;
+                }
+                
+                try {
+                    // Daten bereinigen: Entferne 'undefined' Werte, da Firebase diese ablehnt
+                    const dataToSave = { ...data };
+                    const docId = dataToSave.id;
+                    delete dataToSave.id; // ID nicht als Feld im Dokument speichern
+
+                    Object.keys(dataToSave).forEach(key => {
+                        if (dataToSave[key] === undefined) delete dataToSave[key];
+                    });
+                    
+                    // Zeitstempel für neue Einträge
+                    if (!docId && !dataToSave.createdAt) {
+                        dataToSave.createdAt = new Date().toISOString();
+                    }
+
+                    if (docId) { 
+                        await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'passwords', docId), dataToSave); 
+                        showToast("Passwort aktualisiert");
+                    } else { 
+                        await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'passwords'), dataToSave); 
+                        showToast("Passwort gespeichert");
+                    }
+                    setShowPwdModal(false);
+                } catch (e) {
+                    console.error("Fehler beim Speichern:", e);
+                    showToast("Fehler: " + e.message, 'error');
+                }
             };
             
             const delPwd = async (id) => { if(firebaseUser && db) deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'passwords', id)); };
