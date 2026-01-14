@@ -2,9 +2,19 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AgenturManager CRM</title>
     
+    <!-- APP ICONS & FAVICONS -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+    <!-- Ein stabiles, blaues Schild-Icon für den Home-Screen -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/471/471662.png">
+    
+    <!-- APP MODE (Versteckt Browser-Leisten auf dem Handy) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="AgenturManager">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -15,7 +25,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
-        body { font-family: 'Inter', sans-serif; background-color: #F2F2F7; overflow-x: hidden; width: 100%; }
+        body { font-family: 'Inter', sans-serif; background-color: #F2F2F7; overflow-x: hidden; width: 100%; -webkit-tap-highlight-color: transparent; }
         #root { width: 100%; overflow-x: hidden; }
         
         /* Scrollbar Styling */
@@ -56,6 +66,9 @@
         import React, { useState, useEffect, useMemo, useRef, useCallback } from 'https://esm.sh/react@18.2.0';
         import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
         
+        // KONFIGURATION
+        const APP_VERSION = "v1.1.1"; // Update: Datum entfernt
+
         // Lucide Icons Import via ESM
         import { 
             Users, LayoutDashboard, Lock, Shield, 
@@ -182,6 +195,28 @@
             }, [value, delay]);
             return debouncedValue;
         }
+
+        // NEU: Hilfsfunktion zum Kopieren in die Zwischenablage
+        const copyToClipboard = (text, showToastFn) => {
+            if (!text) return;
+            // Fallback Methode für maximale Kompatibilität (auch in iFrames/WebView)
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed"; // prevent scrolling to bottom
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) showToastFn("Kopiert!");
+                else showToastFn("Fehler beim Kopieren", "error");
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+                showToastFn("Kopieren nicht möglich", "error");
+            }
+            document.body.removeChild(textArea);
+        };
 
         const parseAnyDate = (dateStr) => {
             if (!dateStr) return null;
@@ -313,78 +348,6 @@
             return gaps;
         };
 
-        const generatePDF = async (customer, notes = []) => {
-            if (!window.jspdf) {
-                await new Promise((resolve) => {
-                    const script = document.createElement('script');
-                    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-                    script.onload = resolve;
-                    document.body.appendChild(script);
-                });
-            }
-            if (!window.jspdf.jsPDF.prototype.autoTable) {
-                await new Promise((resolve) => {
-                    const script = document.createElement('script');
-                    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js";
-                    script.onload = resolve;
-                    document.body.appendChild(script);
-                });
-            }
-
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const colorPrimary = [0, 122, 255]; 
-            const colorText = [60, 60, 60];
-
-            doc.setFillColor(...colorPrimary);
-            doc.rect(0, 0, 210, 20, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(16);
-            doc.setFont("helvetica", "bold");
-            doc.text("Agenturmanager CRM - Kundenakte", 15, 13);
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            const dateStr = new Date().toLocaleDateString('de-DE');
-            doc.text(`Stand: ${dateStr}`, 195, 13, { align: 'right' });
-            doc.setTextColor(...colorText);
-            doc.setFontSize(14);
-            doc.setFont("helvetica", "bold");
-            doc.text(`${customer.anrede} ${customer.vorname} ${customer.name}`, 15, 35);
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
-            doc.text(`${customer.strasse}`, 15, 42);
-            doc.text(`${customer.plz} ${customer.ort}`, 15, 47);
-            doc.setDrawColor(200, 200, 200);
-            doc.setFillColor(250, 250, 250);
-            doc.roundedRect(120, 30, 75, 35, 3, 3, 'FD');
-            doc.setFontSize(9);
-            doc.text("Kontaktdaten:", 125, 38);
-            doc.setFont("helvetica", "bold");
-            if(customer.telefon) doc.text(`Tel: ${customer.telefon}`, 125, 44);
-            if(customer.handy) doc.text(`Mobil: ${customer.handy}`, 125, 49);
-            if(customer.mail) { doc.setFontSize(8); doc.text(`Mail: ${customer.mail}`, 125, 54); }
-            doc.setFontSize(9);
-            doc.setFont("helvetica", "normal");
-            doc.text(`Geb: ${customer.gebDatum}`, 125, 61);
-            doc.setFontSize(12);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(0, 122, 255);
-            doc.text("Vertragsübersicht", 15, 75);
-            const tableBody = customer.verträge.map(v => [ v.sparte, v.gesellschaft + '\n' + v.vsnr, v.beginn + ' - ' + v.ablauf, v.risiken || '-', v.zahlweise.toLowerCase().includes('monatlich') ? `${v.mob} € mtl.` : `${v.beitrag} € / Jahr` ]);
-            doc.autoTable({ startY: 80, head: [['Sparte', 'Gesellschaft / VSNR', 'Laufzeit', 'Risiken / Objekt', 'Beitrag']], body: tableBody, theme: 'grid', headStyles: { fillColor: colorPrimary, textColor: 255, fontStyle: 'bold' }, styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' }, columnStyles: { 0: { cellWidth: 40 }, 3: { cellWidth: 45 } } });
-            if (notes && notes.length > 0) {
-                let finalY = doc.lastAutoTable.finalY + 15;
-                if (finalY > 250) { doc.addPage(); finalY = 20; }
-                doc.setFontSize(12);
-                doc.setFont("helvetica", "bold");
-                doc.setTextColor(0, 122, 255);
-                doc.text("Notizen & Historie", 15, finalY);
-                const noteBody = notes.map(n => [n.date, n.author, n.text]);
-                doc.autoTable({ startY: finalY + 5, head: [['Datum', 'Autor', 'Notiz']], body: noteBody, theme: 'striped', styles: { fontSize: 8 }, headStyles: { fillColor: [150, 150, 150] }, columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 35 } } });
-            }
-            doc.save(`Kunde_${customer.name}_${customer.vorname}.pdf`);
-        };
-
         // --- NEW: WORD DOC GENERATOR ---
         const generateWordDoc = (type, customer, user) => {
             const dateStr = new Date().toLocaleDateString('de-DE');
@@ -489,6 +452,78 @@
             document.body.removeChild(link);
         };
 
+        const generatePDF = async (customer, notes = []) => {
+            if (!window.jspdf) {
+                await new Promise((resolve) => {
+                    const script = document.createElement('script');
+                    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+                    script.onload = resolve;
+                    document.body.appendChild(script);
+                });
+            }
+            if (!window.jspdf.jsPDF.prototype.autoTable) {
+                await new Promise((resolve) => {
+                    const script = document.createElement('script');
+                    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js";
+                    script.onload = resolve;
+                    document.body.appendChild(script);
+                });
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const colorPrimary = [0, 122, 255]; 
+            const colorText = [60, 60, 60];
+
+            doc.setFillColor(...colorPrimary);
+            doc.rect(0, 0, 210, 20, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("Agenturmanager CRM - Kundenakte", 15, 13);
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            const dateStr = new Date().toLocaleDateString('de-DE');
+            doc.text(`Stand: ${dateStr}`, 195, 13, { align: 'right' });
+            doc.setTextColor(...colorText);
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.text(`${customer.anrede} ${customer.vorname} ${customer.name}`, 15, 35);
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(`${customer.strasse}`, 15, 42);
+            doc.text(`${customer.plz} ${customer.ort}`, 15, 47);
+            doc.setDrawColor(200, 200, 200);
+            doc.setFillColor(250, 250, 250);
+            doc.roundedRect(120, 30, 75, 35, 3, 3, 'FD');
+            doc.setFontSize(9);
+            doc.text("Kontaktdaten:", 125, 38);
+            doc.setFont("helvetica", "bold");
+            if(customer.telefon) doc.text(`Tel: ${customer.telefon}`, 125, 44);
+            if(customer.handy) doc.text(`Mobil: ${customer.handy}`, 125, 49);
+            if(customer.mail) { doc.setFontSize(8); doc.text(`Mail: ${customer.mail}`, 125, 54); }
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
+            doc.text(`Geb: ${customer.gebDatum}`, 125, 61);
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(0, 122, 255);
+            doc.text("Vertragsübersicht", 15, 75);
+            const tableBody = customer.verträge.map(v => [ v.sparte, v.gesellschaft + '\n' + v.vsnr, v.beginn + ' - ' + v.ablauf, v.risiken || '-', v.zahlweise.toLowerCase().includes('monatlich') ? `${v.mob} € mtl.` : `${v.beitrag} € / Jahr` ]);
+            doc.autoTable({ startY: 80, head: [['Sparte', 'Gesellschaft / VSNR', 'Laufzeit', 'Risiken / Objekt', 'Beitrag']], body: tableBody, theme: 'grid', headStyles: { fillColor: colorPrimary, textColor: 255, fontStyle: 'bold' }, styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' }, columnStyles: { 0: { cellWidth: 40 }, 3: { cellWidth: 45 } } });
+            if (notes && notes.length > 0) {
+                let finalY = doc.lastAutoTable.finalY + 15;
+                if (finalY > 250) { doc.addPage(); finalY = 20; }
+                doc.setFontSize(12);
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(0, 122, 255);
+                doc.text("Notizen & Historie", 15, finalY);
+                const noteBody = notes.map(n => [n.date, n.author, n.text]);
+                doc.autoTable({ startY: finalY + 5, head: [['Datum', 'Autor', 'Notiz']], body: noteBody, theme: 'striped', styles: { fontSize: 8 }, headStyles: { fillColor: [150, 150, 150] }, columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 35 } } });
+            }
+            doc.save(`Kunde_${customer.name}_${customer.vorname}.pdf`);
+        };
+
         const generateMockCustomers = (count) => {
             return Array.from({ length: count }, (_, i) => ({
                 id: String(i + 1), anrede: 'Herr', vorname: 'Max', name: 'Mustermann', strasse: 'Musterstr. 1', plz: '12345', ort: 'Musterstadt', telefon: '', handy: '', mail: '', gebDatum: '01.01.1980', zustMA: 'Max Mustermann', adp: '1234', btnr: '00400', notizen: [], verträge: []
@@ -586,29 +621,33 @@
 
             return (
                 <div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center p-6 animate-fade-in font-sans">
-                <div className="w-full max-w-sm">
-                    <div className="bg-white/90 backdrop-blur-2xl p-8 rounded-[2.5rem] shadow-[0_20px_40px_rgb(0,0,0,0.1)] border border-white/50 text-center">
-                    <div className="w-16 h-16 bg-gradient-to-tr from-[#007AFF] to-[#5AC8FA] rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                        <Shield className="w-8 h-8 text-white" />
+                <div className="w-full max-w-sm flex flex-col items-center">
+                    <div className="bg-white/90 backdrop-blur-2xl p-8 rounded-[2.5rem] shadow-[0_20px_40px_rgb(0,0,0,0.1)] border border-white/50 text-center w-full">
+                        <div className="w-16 h-16 bg-gradient-to-tr from-[#007AFF] to-[#5AC8FA] rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                            <Shield className="w-8 h-8 text-white" />
+                        </div>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">Willkommen</h1>
+                        <p className="text-gray-500 mb-6 font-medium text-sm">Bitte 4-stelligen PIN eingeben</p>
+                        <div className="flex justify-center gap-4 mb-8">
+                            {[0, 1, 2, 3].map((idx) => (
+                            <div key={idx} className={`w-4 h-4 rounded-full transition-all duration-300 ${idx < pin.length ? 'bg-[#007AFF] scale-110' : 'bg-gray-200'}`} />
+                            ))}
+                        </div>
+                        {loginError && <p className="text-red-500 text-sm font-bold animate-pulse mb-4">{loginError}</p>}
+                        <div className="grid grid-cols-3 gap-4 mb-4">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                            <button key={num} onClick={() => handleNumClick(num)} className="h-16 rounded-2xl bg-gray-50 text-2xl font-semibold text-gray-700 hover:bg-gray-100 active:scale-95 transition-all shadow-sm border border-gray-100">
+                                {num}
+                            </button>
+                            ))}
+                            <button onClick={() => setPin('')} className="h-16 rounded-2xl bg-red-50 text-red-500 text-lg font-bold hover:bg-red-100 active:scale-95 transition-all flex items-center justify-center">C</button>
+                            <button onClick={() => handleNumClick(0)} className="h-16 rounded-2xl bg-gray-50 text-xl font-semibold text-gray-700 hover:bg-gray-100 active:scale-95 transition-all shadow-sm border border-gray-100">0</button>
+                            <button onClick={() => setPin(prev => prev.slice(0, -1))} className="h-16 rounded-2xl bg-gray-50 text-gray-500 hover:bg-gray-100 active:scale-95 transition-all flex items-center justify-center border border-gray-100"><ArrowLeft size={24} /></button>
+                        </div>
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">Willkommen</h1>
-                    <p className="text-gray-500 mb-6 font-medium text-sm">Bitte 4-stelligen PIN eingeben</p>
-                    <div className="flex justify-center gap-4 mb-8">
-                        {[0, 1, 2, 3].map((idx) => (
-                        <div key={idx} className={`w-4 h-4 rounded-full transition-all duration-300 ${idx < pin.length ? 'bg-[#007AFF] scale-110' : 'bg-gray-200'}`} />
-                        ))}
-                    </div>
-                    {loginError && <p className="text-red-500 text-sm font-bold animate-pulse mb-4">{loginError}</p>}
-                    <div className="grid grid-cols-3 gap-4 mb-4">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                        <button key={num} onClick={() => handleNumClick(num)} className="h-16 rounded-2xl bg-gray-50 text-2xl font-semibold text-gray-700 hover:bg-gray-100 active:scale-95 transition-all shadow-sm border border-gray-100">
-                            {num}
-                        </button>
-                        ))}
-                        <button onClick={() => setPin('')} className="h-16 rounded-2xl bg-red-50 text-red-500 text-lg font-bold hover:bg-red-100 active:scale-95 transition-all flex items-center justify-center">C</button>
-                        <button onClick={() => handleNumClick(0)} className="h-16 rounded-2xl bg-gray-50 text-xl font-semibold text-gray-700 hover:bg-gray-100 active:scale-95 transition-all shadow-sm border border-gray-100">0</button>
-                        <button onClick={() => setPin(prev => prev.slice(0, -1))} className="h-16 rounded-2xl bg-gray-50 text-gray-500 hover:bg-gray-100 active:scale-95 transition-all flex items-center justify-center border border-gray-100"><ArrowLeft size={24} /></button>
-                    </div>
+                    {/* NEU: Nur Versionsnummer (Datum entfernt) */}
+                    <div className="mt-6 text-gray-400 text-xs font-mono opacity-60 text-center">
+                        <p>AgenturManager {APP_VERSION}</p>
                     </div>
                 </div>
                 </div>
@@ -1592,38 +1631,9 @@
             const deleteTask = async (id) => { if (firebaseUser && db) await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'tasks', id)); };
             
             const savePassword = async (data) => {
-                if (!firebaseUser || !db) {
-                    showToast("Fehler: Nicht angemeldet", 'error');
-                    return;
-                }
-                
-                try {
-                    // Daten bereinigen: Entferne 'undefined' Werte, da Firebase diese ablehnt
-                    const dataToSave = { ...data };
-                    const docId = dataToSave.id;
-                    delete dataToSave.id; // ID nicht als Feld im Dokument speichern
-
-                    Object.keys(dataToSave).forEach(key => {
-                        if (dataToSave[key] === undefined) delete dataToSave[key];
-                    });
-                    
-                    // Zeitstempel für neue Einträge
-                    if (!docId && !dataToSave.createdAt) {
-                        dataToSave.createdAt = new Date().toISOString();
-                    }
-
-                    if (docId) { 
-                        await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'passwords', docId), dataToSave); 
-                        showToast("Passwort aktualisiert");
-                    } else { 
-                        await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'passwords'), dataToSave); 
-                        showToast("Passwort gespeichert");
-                    }
-                    setShowPwdModal(false);
-                } catch (e) {
-                    console.error("Fehler beim Speichern:", e);
-                    showToast("Fehler: " + e.message, 'error');
-                }
+                if (!firebaseUser || !db) return;
+                if (data.id) { const { id, ...rest } = data; await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'passwords', id), rest); } else { await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'passwords'), data); }
+                setShowPwdModal(false);
             };
             
             const delPwd = async (id) => { if(firebaseUser && db) deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'passwords', id)); };
@@ -1903,9 +1913,7 @@
                         avusPassword: userData.avusPassword || '',
                         role: isAdmin ? (userData.role || 'user') : (currentUser.role), 
                         hidden: isAdmin ? (userData.hidden || false) : (currentUser.hidden || false),
-                        allowedToView: isAdmin ? editingUserAllowedToView : (currentUser.allowedToView || []),
-                        // NEU: Berechtigung für Dienstplan speichern
-                        canEditRoster: isAdmin ? (userData.canEditRoster || false) : (currentUser.canEditRoster || false)
+                        allowedToView: isAdmin ? editingUserAllowedToView : (currentUser.allowedToView || [])
                     };
 
                     if (userData.id) { 
@@ -2001,14 +2009,14 @@
                         
                         const res = await fetch(strat.url);
                         if (!res.ok) {
-                            console.warn(`${strat.name} Fehler ${res.status}: ${res.statusText}`);
+                            console.warn(`${strat.name} Fehler ${res.status}`);
                             continue; 
                         }
                         
                         const txt = await res.text();
 
                         if (txt.includes('<!DOCTYPE') || txt.includes('<html') || txt.includes('google.com/accounts')) {
-                            console.warn(`${strat.name} lieferte HTML (Auth?)`);
+                            console.warn(`${strat.name} lieferte HTML.`);
                             continue; 
                         }
                         
@@ -2029,7 +2037,6 @@
 
                 if (!fetchSuccess || !csvContent) {
                     const errorMsg = "Import fehlgeschlagen. Google blockiert den Zugriff. Bitte prüfen Sie, ob das Sheet 'Im Web veröffentlicht' ist.";
-                    console.error(errorMsg);
                     setImportError(errorMsg);
                     setIsImporting(false);
                     if (isAutoLoad) setIsDataReady(true);
@@ -2274,22 +2281,51 @@
                                                     </div>
                                                 )}
                                             </div>
-                                            <h3 className="font-bold">{p.name}</h3>
-                                            <p className="text-xs text-gray-400 mb-2 font-mono">{p.uNummer}</p>
-                                            <div className="bg-gray-50 p-2 rounded text-center font-mono text-sm mb-2 select-all">{p.passwort}</div>
                                             
-                                            {/* --- NEW FIELDS DISPLAY --- */}
+                                            <h3 className="font-bold text-gray-800 mb-4 text-lg">{p.name}</h3>
+                                            
+                                            {/* NEU: Benutzername Feld */}
+                                            <div className="bg-gray-50 p-2.5 rounded-lg mb-2 flex justify-between items-center group border border-gray-100">
+                                                <div className="overflow-hidden mr-2">
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Benutzer</p>
+                                                    <p className="text-sm font-mono text-gray-700 truncate select-all">{p.uNummer}</p>
+                                                </div>
+                                                <button 
+                                                    onClick={() => copyToClipboard(p.uNummer, showToast)} 
+                                                    className="p-2 text-gray-400 hover:text-blue-600 bg-white rounded-lg shadow-sm border border-gray-100 hover:border-blue-200 transition-all active:scale-95" 
+                                                    title="Benutzername kopieren"
+                                                >
+                                                    <Copy size={16}/>
+                                                </button>
+                                            </div>
+
+                                            {/* NEU: Passwort Feld */}
+                                            <div className="bg-gray-50 p-2.5 rounded-lg mb-2 flex justify-between items-center group border border-gray-100">
+                                                <div className="overflow-hidden mr-2">
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Passwort</p>
+                                                    <p className="text-sm font-mono text-gray-700 truncate select-all">{p.passwort}</p>
+                                                </div>
+                                                <button 
+                                                    onClick={() => copyToClipboard(p.passwort, showToast)} 
+                                                    className="p-2 text-gray-400 hover:text-blue-600 bg-white rounded-lg shadow-sm border border-gray-100 hover:border-blue-200 transition-all active:scale-95" 
+                                                    title="Passwort kopieren"
+                                                >
+                                                    <Copy size={16}/>
+                                                </button>
+                                            </div>
+                                            
+                                            {/* Link & Info */}
                                             {p.link && (
-                                                <div className="text-xs text-center mt-2">
-                                                    <a href={p.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center justify-center gap-1">
-                                                        <ExternalLink size={12} /> Zum Portal
+                                                <div className="text-xs text-center mt-4 pt-2 border-t border-gray-50">
+                                                    <a href={p.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 font-medium hover:underline flex items-center justify-center gap-1.5 transition-colors">
+                                                        <ExternalLink size={14} /> Zum Portal öffnen
                                                     </a>
                                                 </div>
                                             )}
                                             {p.info && (
-                                                <div className="mt-3 bg-yellow-50 border border-yellow-100 p-2 rounded-lg text-xs text-yellow-800 flex items-start gap-2">
+                                                <div className="mt-3 bg-amber-50 border border-amber-100 p-2.5 rounded-lg text-xs text-amber-800 flex items-start gap-2">
                                                     <Info size={14} className="shrink-0 mt-0.5" />
-                                                    <span>{p.info}</span>
+                                                    <span className="leading-snug">{p.info}</span>
                                                 </div>
                                             )}
                                         </IOSCard>
