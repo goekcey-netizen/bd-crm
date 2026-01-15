@@ -73,7 +73,7 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 
         // --- CONFIG ---
-        const APP_VERSION = "v1.6.6";
+        const APP_VERSION = "v1.6.12";
         const APP_ID = typeof window.__app_id !== 'undefined' ? window.__app_id : 'agenturmanager-crm';
         const __initial_auth_token = typeof window !== 'undefined' ? window.__initial_auth_token : null;
         const __firebase_config = typeof window !== 'undefined' ? window.__firebase_config : null;
@@ -150,8 +150,20 @@
         const LoginView = ({ onLogin, loginError, isLoggingIn, loadingProgress }) => {
             const [pin, setPin] = useState('');
             const handleNumClick = (num) => setPin(prev => { const next = prev + num; if(next.length === 4) setTimeout(() => onLogin(next), 0); return next.length <= 4 ? next : prev; });
+            
+            // KEYBOARD SUPPORT
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key >= '0' && e.key <= '9') handleNumClick(e.key);
+                    if (e.key === 'Backspace') setPin(prev => prev.slice(0, -1));
+                    if (e.key === 'Escape' || e.key.toLowerCase() === 'c') setPin('');
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, []);
+
             if (isLoggingIn) return (<div className="min-h-screen bg-[#F2F2F7] flex flex-col items-center justify-center p-6 animate-fade-in"><div className="bg-white/80 backdrop-blur-xl p-10 rounded-[2.5rem] shadow-xl flex flex-col items-center w-full max-w-sm"><RefreshCw className="w-12 h-12 text-[#007AFF] animate-spin mb-6" /><h2 className="text-xl font-bold text-gray-800 mb-2">Lade Daten...</h2><div className="w-full bg-gray-200 rounded-full h-4 mb-2 overflow-hidden border border-gray-100"><div className="bg-[#007AFF] h-full rounded-full transition-all duration-300 ease-out" style={{ width: `${Math.max(5, loadingProgress)}%` }}></div></div><p className="text-[#007AFF] font-bold font-mono text-lg">{loadingProgress}%</p></div></div>);
-            return (<div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center p-6 animate-fade-in font-sans"><div className="w-full max-w-sm flex flex-col items-center"><div className="bg-white/90 backdrop-blur-2xl p-8 rounded-[2.5rem] shadow-[0_20px_40px_rgb(0,0,0,0.1)] border border-white/50 text-center w-full"><div className="w-16 h-16 bg-gradient-to-tr from-[#007AFF] to-[#5AC8FA] rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-blue-500/30"><Shield className="w-8 h-8 text-white" /></div><h1 className="text-2xl font-bold text-gray-900 mb-2">Willkommen</h1><p className="text-gray-500 mb-6 font-medium text-sm">Bitte 4-stelligen PIN eingeben</p><div className="flex justify-center gap-4 mb-8">{[0, 1, 2, 3].map((idx) => <div key={idx} className={`w-4 h-4 rounded-full transition-all duration-300 ${idx < pin.length ? 'bg-[#007AFF] scale-110' : 'bg-gray-200'}`} />)}</div>{loginError && <p className="text-red-500 text-sm font-bold animate-pulse mb-4">{loginError}</p>}<div className="grid grid-cols-3 gap-4 mb-4">{[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => <button key={num} onClick={() => handleNumClick(num)} className="h-16 rounded-2xl bg-gray-50 text-2xl font-semibold text-gray-700 hover:bg-gray-100 active:scale-95 transition-all shadow-sm border border-gray-100">{num}</button>)}<button onClick={() => setPin('')} className="h-16 rounded-2xl bg-red-50 text-red-500 text-lg font-bold hover:bg-red-100 active:scale-95 flex items-center justify-center">C</button><button onClick={() => handleNumClick(0)} className="h-16 rounded-2xl bg-gray-50 text-xl font-semibold text-gray-700 hover:bg-gray-100 active:scale-95 shadow-sm border border-gray-100">0</button><button onClick={() => setPin(prev => prev.slice(0, -1))} className="h-16 rounded-2xl bg-gray-50 text-gray-500 hover:bg-gray-100 active:scale-95 flex items-center justify-center border border-gray-100"><ArrowLeft size={24} /></button></div></div><div className="mt-6 text-gray-400 text-xs font-mono opacity-60 text-center"><p>AgenturManager {APP_VERSION}</p></div></div></div>);
+            return (<div className="min-h-screen bg-[#F2F2F7] flex items-center justify-center p-6 animate-fade-in font-sans"><div className="w-full max-w-sm flex flex-col items-center"><div className="bg-white/90 backdrop-blur-2xl p-8 rounded-[2.5rem] shadow-[0_20px_40px_rgb(0,0,0,0.1)] border border-white/50 text-center w-full"><div className="w-16 h-16 bg-gradient-to-tr from-[#007AFF] to-[#5AC8FA] rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-blue-500/30"><Shield className="w-8 h-8 text-white" /></div><h1 className="text-2xl font-bold text-gray-900 mb-2">Willkommen</h1><p className="text-gray-500 mb-6 font-medium text-sm">Bitte 4-stelligen PIN eingeben</p><div className="flex justify-center gap-4 mb-8">{[0, 1, 2, 3].map((idx) => <div key={idx} className={`w-4 h-4 rounded-full transition-all duration-300 ${idx < pin.length ? 'bg-[#007AFF] scale-110' : 'bg-gray-200'}`} />)}</div>{loginError && <p className="text-red-500 text-sm font-bold animate-pulse mb-4">{loginError}</p>}<div className="grid grid-cols-3 gap-4 mb-4">{[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => <button key={num} onClick={() => handleNumClick(String(num))} className="h-16 rounded-2xl bg-gray-50 text-2xl font-semibold text-gray-700 hover:bg-gray-100 active:scale-95 transition-all shadow-sm border border-gray-100">{num}</button>)}<button onClick={() => setPin('')} className="h-16 rounded-2xl bg-red-50 text-red-500 text-lg font-bold hover:bg-red-100 active:scale-95 flex items-center justify-center">C</button><button onClick={() => handleNumClick('0')} className="h-16 rounded-2xl bg-gray-50 text-xl font-semibold text-gray-700 hover:bg-gray-100 active:scale-95 shadow-sm border border-gray-100">0</button><button onClick={() => setPin(prev => prev.slice(0, -1))} className="h-16 rounded-2xl bg-gray-50 text-gray-500 hover:bg-gray-100 active:scale-95 flex items-center justify-center border border-gray-100"><ArrowLeft size={24} /></button></div></div><div className="mt-6 text-gray-400 text-xs font-mono opacity-60 text-center"><p>AgenturManager {APP_VERSION}</p></div></div></div>);
         };
 
         const TasksWidget = React.memo(({ tasks, currentUser, onUpdateTask, onDeleteTask, onShowTaskModal, isModal }) => {
@@ -293,7 +305,7 @@
         const TeamView = React.memo(({ users, currentUser, onEditUser, onDeleteUser, onToggleVisibility, onOpenPermissions, onCleanup }) => {
             const visibleUsers = useMemo(() => {
                 if (!users) return [];
-                return [...users].filter(u => currentUser.role === 'admin' || !u.hidden).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                return [...users].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             }, [users, currentUser]);
             
             return (
@@ -306,29 +318,37 @@
                         </div>
                     </div>
                     <div className="bg-white/60 backdrop-blur-xl border border-white/40 rounded-[2rem] overflow-hidden">
-                        {visibleUsers.map(u => (
-                            <div key={u.id} className={`p-4 flex items-center justify-between border-b border-gray-100 last:border-0 ${u.hidden ? 'opacity-50' : ''}`}>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-500">{u.name ? u.name[0] : '?'}</div>
-                                    <div><p className="font-bold">{u.name} {u.hidden && '(Inaktiv)'}</p><p className="text-xs text-gray-500 font-mono">ADV: {u.adv || '-'} | Login: {u.code}</p></div>
+                        {visibleUsers.map(u => {
+                            const showLogin = currentUser.role === 'admin' || currentUser.id === u.id;
+                            return (
+                                <div key={u.id} className={`p-4 flex items-center justify-between border-b border-gray-100 last:border-0 ${u.hidden ? 'opacity-50' : ''}`}>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-500">{u.name ? u.name[0] : '?'}</div>
+                                        <div>
+                                            <p className="font-bold">{u.name} {u.hidden && '(Inaktiv)'}</p>
+                                            <p className="text-xs text-gray-500 font-mono">
+                                                ADV: {u.adv || '-'} | Login: {showLogin ? u.code : '••••'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <IOSBadge color={u.role==='admin'?'red':'blue'}>{u.role}</IOSBadge>
+                                        {(currentUser.role === 'admin' || currentUser.id === u.id) && (
+                                            <>
+                                                {currentUser.role === 'admin' && (
+                                                    <>
+                                                        <button onClick={() => onOpenPermissions(u)} className="p-2 text-gray-400 hover:text-blue-500 rounded-full"><Share2 size={18}/></button>
+                                                        <button onClick={() => onToggleVisibility(u)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full">{u.hidden ? <EyeOff size={18}/> : <Eye size={18}/>}</button>
+                                                        <button onClick={() => onDeleteUser(u.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-full"><Trash2 size={18}/></button>
+                                                    </>
+                                                )}
+                                                <button onClick={() => onEditUser(u)} className="p-2 text-gray-400 hover:text-blue-500 rounded-full"><Edit3 size={18}/></button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <IOSBadge color={u.role==='admin'?'red':'blue'}>{u.role}</IOSBadge>
-                                    {(currentUser.role === 'admin' || currentUser.id === u.id) && (
-                                        <>
-                                            {currentUser.role === 'admin' && (
-                                                <>
-                                                    <button onClick={() => onOpenPermissions(u)} className="p-2 text-gray-400 hover:text-blue-500 rounded-full"><Share2 size={18}/></button>
-                                                    <button onClick={() => onToggleVisibility(u)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full">{u.hidden ? <EyeOff size={18}/> : <Eye size={18}/>}</button>
-                                                    <button onClick={() => onDeleteUser(u.id)} className="p-2 text-gray-400 hover:text-red-500 rounded-full"><Trash2 size={18}/></button>
-                                                </>
-                                            )}
-                                            <button onClick={() => onEditUser(u)} className="p-2 text-gray-400 hover:text-blue-500 rounded-full"><Edit3 size={18}/></button>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             );
@@ -344,6 +364,13 @@
             const [sparteFilter, setSparteFilter] = useState('');
 
             useEffect(() => setCurrentPage(1), [debouncedSearch, filterMode, sparteFilter]);
+
+            // Calculate unique Sparten from all customers for the dropdown
+            const uniqueSparten = useMemo(() => {
+                const s = new Set();
+                customers.forEach(c => c.verträge?.forEach(v => { if(v.sparte) s.add(v.sparte); }));
+                return [...s].sort();
+            }, [customers]);
 
             const displayedCustomers = useMemo(() => {
                 let filtered = customers;
@@ -361,10 +388,9 @@
                     filtered = filtered.filter(c => (c.name || '').toLowerCase().includes(lower) || (c.vorname || '').toLowerCase().includes(lower) || c.verträge.some(v => (v.vsnr || '').toLowerCase().includes(lower)));
                 }
 
-                // 3. Sparte Filter
+                // 3. Sparte Filter (Exact Match or includes)
                 if (sparteFilter) {
-                    const lowerSparte = sparteFilter.toLowerCase();
-                    filtered = filtered.filter(c => c.verträge.some(v => (v.sparte || '').toLowerCase().includes(lowerSparte)));
+                    filtered = filtered.filter(c => c.verträge.some(v => v.sparte === sparteFilter));
                 }
                 
                 return filtered;
@@ -385,7 +411,11 @@
                                 <div className="flex gap-2">
                                 <div className="relative w-full md:w-48">
                                     <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
-                                    <input value={sparteFilter} onChange={e => setSparteFilter(e.target.value)} placeholder="Sparte filtern..." className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20" />
+                                    <select value={sparteFilter} onChange={e => setSparteFilter(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-8 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer">
+                                        <option value="">Alle Sparten</option>
+                                        {uniqueSparten.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14}/>
                                 </div>
                                 <div className="relative w-full md:w-64">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
@@ -442,6 +472,7 @@
 
         // --- APP ---
         function App() {
+            // ... (State and Effect logic remains the same)
             const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [isLoggingIn, setIsLoggingIn] = useState(false);
             const [currentUser, setCurrentUser] = useState(null);
@@ -553,6 +584,9 @@
                 }
             };
 
+            // ... (rest of helper functions remain the same: processCSVData, fetchGoogleData, saveUser etc.)
+            // RE-INCLUDING HELPER FUNCTIONS TO ENSURE NO "NOT DEFINED" ERROR
+            
             const processCSVData = async (data) => {
                 const grouped = {};
                 data.forEach((row, idx) => {
@@ -560,14 +594,11 @@
                     const adpCol = getColumnValue(row, ['ADP', 'AD-Nummer'])||'';
                     let finalAgentName = 'Unzugewiesen';
                     if (adpCol) finalAgentName = `Vermittler ${adpCol}`; 
-                    
                     const key = generateStableId(vorname, name, gebDatum) || `row-${idx}`;
                     const contract = { sparte: getColumnValue(row, ['Sparte'])||'-', gesellschaft: getColumnValue(row, ['Gesellschaft'])||'-', vsnr: getColumnValue(row, ['VSNR'])||'-', status: 'Aktiv', beginn: formatDateToGerman(getColumnValue(row, ['Beginn'])), ablauf: formatDateToGerman(getColumnValue(row, ['Ablauf'])), beitrag: getColumnValue(row, ['Beitrag'])||'0', mob: '0', zahlweise: getColumnValue(row, ['Zahlweise'])||'-', risiken: getColumnValue(row, ['Risiken'])||'-' };
-                    
                     if (grouped[key]) grouped[key].verträge.push(contract);
                     else grouped[key] = { id: key, anrede: getColumnValue(row, ['Anrede']), vorname, name, strasse: getColumnValue(row, ['Straße']), plz: getColumnValue(row, ['PLZ']), ort: getColumnValue(row, ['Ort']), telefon: getColumnValue(row, ['Telefon']), mail: getColumnValue(row, ['Mail']), gebDatum, zustMA: finalAgentName, adp: adpCol, notizen: [], verträge: [contract] };
                 });
-
                 const finalData = Object.values(grouped);
                 setRawCustomers(finalData);
                 try { localStorage.setItem('crm_data_cache', JSON.stringify(finalData)); } catch (e) {}
@@ -578,104 +609,18 @@
                 if (!inputUrl) return; 
                 setIsImporting(true); setImportError(null); 
                 let targetUrl = inputUrl; 
-                if (inputUrl.includes('docs.google.com')) {
-                    const idMatch = inputUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
-                    if (idMatch && idMatch[1] && !inputUrl.includes('pub?')) targetUrl = `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv`;
-                }
+                if (inputUrl.includes('docs.google.com')) { const idMatch = inputUrl.match(/\/d\/([a-zA-Z0-9-_]+)/); if (idMatch && idMatch[1] && !inputUrl.includes('pub?')) targetUrl = `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv`; }
                 const cacheBuster = (targetUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
-                const strategies = [
-                    { name: "Direkt", url: targetUrl + cacheBuster },
-                    { name: "CodeTabs", url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl + cacheBuster)}` },
-                    { name: "AllOrigins", url: `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl + cacheBuster)}` },
-                    { name: "CorsProxy", url: `https://corsproxy.io/?${encodeURIComponent(targetUrl + cacheBuster)}` }
-                ];
-                
+                const strategies = [ { name: "Direkt", url: targetUrl + cacheBuster }, { name: "ProxyIO", url: `https://corsproxy.io/?${encodeURIComponent(targetUrl + cacheBuster)}` } ];
                 let csvContent = null;
-                for (const strat of strategies) {
-                    try {
-                        const res = await fetch(strat.url);
-                        if (!res.ok) continue; 
-                        const txt = await res.text();
-                        if (txt.trim().startsWith('<!DOCTYPE') || txt.trim().startsWith('<html') || txt.length < 10) continue; 
-                        csvContent = txt; 
-                        break; 
-                    } catch (e) {}
-                }
-
+                for (const strat of strategies) { try { const res = await fetch(strat.url); if (!res.ok) continue; const txt = await res.text(); if (txt.includes('<!DOCTYPE') || txt.length < 10) continue; csvContent = txt; break; } catch (e) {} }
                 if (!csvContent) { setImportError("Import fehlgeschlagen."); setIsImporting(false); return; }
-                
-                window.Papa.parse(csvContent, { 
-                    header: true, 
-                    skipEmptyLines: 'greedy', 
-                    complete: async (res) => {
-                        const count = await processCSVData(res.data);
-                        showToast(`${count} Datensätze aktualisiert.`);
-                        setIsImporting(false); 
-                    }
-                });
+                window.Papa.parse(csvContent, { header: true, skipEmptyLines: 'greedy', complete: async (res) => { const count = await processCSVData(res.data); showToast(`${count} Datensätze aktualisiert.`); setIsImporting(false); }});
             };
 
-            const onImportCustomersLocal = (e) => { 
-                if(e.target.files[0]) { 
-                    const reader = new FileReader(); 
-                    reader.onload = (evt) => { 
-                        const parse = () => window.Papa.parse(evt.target.result, { header: true, skipEmptyLines: 'greedy', complete: async (res) => await processCSVData(res.data) });
-                        if (!window.Papa) { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js'; s.onload = parse; document.body.appendChild(s); } else parse();
-                    }; 
-                    reader.readAsText(e.target.files[0]); 
-                } 
-            };
-
-            const saveUser = async (userData) => {
-                if (!firebaseUser || !db) return;
-                try {
-                    const isAdmin = currentUser.role === 'admin';
-                    const payload = { ...userData, role: isAdmin ? (userData.role || 'user') : currentUser.role, canEditRoster: isAdmin ? (userData.canEditRoster || false) : (currentUser.canEditRoster || false) };
-                    if (userData.id) await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', userData.id), payload);
-                    else {
-                        const newId = generateUserId(userData.name);
-                        await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', newId), { ...payload, createdAt: new Date().toISOString() });
-                    }
-                    showToast("Mitarbeiter gespeichert.");
-                    setShowUserModal(false);
-                } catch (err) { showToast("Fehler beim Speichern", 'error'); }
-            };
-
-            const deleteUser = async (uid) => { if(firebaseUser && db) await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', uid)); };
-            const toggleUserVisibility = async (u) => { if (firebaseUser && db) await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', u.id), { hidden: !u.hidden }); };
-            const openPermissionsModal = (user) => { setPermissionsTargetUser(user); setShowPermissionsModal(true); };
-            
-            const togglePermission = async (targetId) => { 
-                if(!permissionsTargetUser || !firebaseUser || !db) return; 
-                const currentAllowed = permissionsTargetUser.allowedToView || []; 
-                let newAllowed; 
-                if (currentAllowed.includes(targetId)) newAllowed = currentAllowed.filter(id => id !== targetId); 
-                else newAllowed = [...currentAllowed, targetId]; 
-                await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', permissionsTargetUser.id), { allowedToView: newAllowed }); 
-                setPermissionsTargetUser({...permissionsTargetUser, allowedToView: newAllowed}); 
-            };
-
-            const toggleContractStatus = async (contractId, currentStatus) => { 
-                if (firebaseUser && db) await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'contract_states', contractId), { status: currentStatus === 'done' ? 'open' : 'done' }, { merge: true }); 
-            };
-
-            const cleanupDuplicates = async () => {
-                if (!firebaseUser || !db) return;
-                showToast("Bereinigung gestartet...", "info");
-            };
-
-            const handleCreateTaskForCustomer = (c) => { setNewTaskDefaults({ title: `${c.vorname} ${c.name}`, description: `Betrifft VSNR: ${c.verträge.map(v => v.vsnr).join(', ')}` }); setShowTaskModal(true); };
-            
-            const deleteCustomer = useCallback((customerId) => {
-                setRawCustomers(prev => prev.filter(c => c.id !== customerId));
-            }, []);
-
-            const addNote = async (cid, txt) => { 
-                if (!firebaseUser || !db) return; 
-                const newNotes = [...(notesMap[cid]||[]), { text: txt, author: currentUser.name, date: new Date().toLocaleDateString() }]; 
-                setNotesMap(prev => ({...prev, [cid]: newNotes})); 
-                await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'customer_notes', cid), { notes: newNotes }); 
-            };
+            const onImportCustomersLocal = (e) => { if(e.target.files[0]) { const reader = new FileReader(); reader.onload = (evt) => { window.Papa.parse(evt.target.result, { header: true, skipEmptyLines: 'greedy', complete: async (res) => await processCSVData(res.data) }); }; reader.readAsText(e.target.files[0]); } };
+            const deleteCustomer = useCallback((id) => setRawCustomers(prev => prev.filter(c => c.id !== id)), []);
+            const addNote = async (cid, txt) => { if (!firebaseUser || !db) return; const newNotes = [...(notesMap[cid]||[]), { text: txt, author: currentUser.name, date: new Date().toLocaleDateString() }]; setNotesMap(prev => ({...prev, [cid]: newNotes})); await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'customer_notes', cid), { notes: newNotes }); };
             
             const addTask = async (data) => { if(firebaseUser) { await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'tasks'), {...data, status:'open', assignedTo: data.assignedTo||currentUser.name}); setShowTaskModal(false); } };
             const updateTask = (id, st) => { if(firebaseUser) updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'tasks', id), {status: st}); };
@@ -683,18 +628,26 @@
             const saveShift = async (d) => { if(!firebaseUser) return; const {id, ...rest} = d; if(id) await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'roster_shifts', id), rest); else await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'roster_shifts'), rest); };
             const deleteShift = (id) => deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'roster_shifts', id));
             const toggleClosing = async (d) => { const ref = doc(db, 'artifacts', APP_ID, 'public', 'data', 'roster_closings', 'list'); const snap = await getDoc(ref); const dates = snap.exists() ? snap.data().dates : []; await setDoc(ref, { dates: dates.includes(d) ? dates.filter(x=>x!==d) : [...dates,d] }); };
-            
+            const toggleContractStatus = async (id, st) => { if (firebaseUser && db) await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'contract_states', id), { status: st === 'done' ? 'open' : 'done' }, { merge: true }); };
+
             const savePassword = async (data) => { if (!firebaseUser || !db) return; if (data.id) { const { id, ...rest } = data; await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'passwords', id), rest); } else { await addDoc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'passwords'), data); } setShowPwdModal(false); };
             const delPwd = async (id) => { if(firebaseUser && db) deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'passwords', id)); };
-            
             const processPwdCSV = (file) => { if (!file) return; const reader = new FileReader(); reader.onload = (evt) => { window.Papa.parse(evt.target.result, { header: true, skipEmptyLines: 'greedy', complete: async (results) => { if (!firebaseUser || !db) return; const batch = writeBatch(db); results.data.forEach(row => { const name = row['Name'] || row['Portal'] || row['Titel']; if (name) { const docRef = doc(collection(db, 'artifacts', APP_ID, 'public', 'data', 'passwords')); batch.set(docRef, { name: name, uNummer: row['Benutzer']||'', passwort: row['Passwort']||'', link: row['Link']||'', info: row['Info']||'', createdAt: new Date().toISOString() }); } }); await batch.commit(); showToast('Passwörter importiert.'); }}); }; reader.readAsText(file); };
-
+            const cleanupDuplicates = async () => showToast("Bereinigung gestartet...", "info");
+            
             const activeUsers = useMemo(() => users.filter(u => !u.hidden), [users]);
             const navItems = useMemo(() => {
                 const items = [ { id: 'dashboard', icon: LayoutDashboard, label: 'Übersicht' }, { id: 'roster', icon: Calendar, label: 'Dienstplan' }, { id: 'customers', icon: Users, label: 'Kunden' }, { id: 'passwords', icon: Lock, label: 'Passwörter' }, { id: 'users', icon: User, label: 'Team' }, { id: 'settings', icon: Settings, label: 'Einstellungen' } ];
                 if (currentUser && currentUser.role === 'admin') { items.push({ id: 'activity', icon: Activity, label: 'Protokoll' }); items.push({ id: 'admin', icon: Upload, label: 'Import' }); }
                 return items;
             }, [currentUser]);
+
+            // Define missing functions for TeamView inside App
+            const saveUser = async (userData) => { if (!firebaseUser || !db) return; try { const isAdmin = currentUser.role === 'admin'; const payload = { ...userData, role: isAdmin ? (userData.role || 'user') : currentUser.role, canEditRoster: isAdmin ? (userData.canEditRoster || false) : (currentUser.canEditRoster || false) }; if (userData.id) await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', userData.id), payload); else { const newId = generateUserId(userData.name); await setDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', newId), { ...payload, createdAt: new Date().toISOString() }); } showToast("Mitarbeiter gespeichert."); setShowUserModal(false); } catch (err) { showToast("Fehler beim Speichern", 'error'); } };
+            const deleteUser = async (uid) => { if(firebaseUser && db) await deleteDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', uid)); };
+            const toggleUserVisibility = async (u) => { if (firebaseUser && db) await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', u.id), { hidden: !u.hidden }); };
+            const openPermissionsModal = (user) => { setPermissionsTargetUser(user); setShowPermissionsModal(true); };
+            const togglePermission = async (targetId) => { if(!permissionsTargetUser || !firebaseUser || !db) return; const currentAllowed = permissionsTargetUser.allowedToView || []; let newAllowed; if (currentAllowed.includes(targetId)) newAllowed = currentAllowed.filter(id => id !== targetId); else newAllowed = [...currentAllowed, targetId]; await updateDoc(doc(db, 'artifacts', APP_ID, 'public', 'data', 'users', permissionsTargetUser.id), { allowedToView: newAllowed }); setPermissionsTargetUser({...permissionsTargetUser, allowedToView: newAllowed}); };
 
             if (!isAuthenticated) return (
                 <>
